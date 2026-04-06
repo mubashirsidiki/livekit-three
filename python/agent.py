@@ -20,7 +20,7 @@ from livekit.plugins import noise_cancellation, silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from core.logging.logger import LOG
-from core.models import CallClassification, CallMetadata
+from core.models import CallClassification
 
 load_dotenv(".env.local")
 
@@ -140,20 +140,6 @@ async def _on_session_end(
 
     if classification:
         LOG.info(f"Call Classification: {classification.model_dump_json()}")
-
-        metadata = CallMetadata(
-            call_datetime=datetime.now(timezone.utc),
-            call_transcript=_build_transcript(report.chat_history),
-            is_spam=classification.is_spam,
-            reason_for_call=classification.reason_for_call,
-            callback_required=classification.callback_required,
-            callback_required_reason=classification.callback_required_reason,
-            caller_name=classification.caller_name,
-            calendar_event=classification.calendar_event,
-            service_pricing=classification.service_pricing,
-            call_duration=round(call_duration["seconds"]),
-        )
-
     else:
         LOG.info("No classification generated for session")
 
@@ -166,7 +152,9 @@ async def entrypoint(ctx: agents.JobContext):
     await ctx.connect()
 
     participant = await ctx.wait_for_participant()
-    LOG.info(f"Participant: {participant.sid} {participant.identity} {participant.name} (kind={participant.kind})")
+    LOG.info(
+        f"Participant: {participant.sid} {participant.identity} {participant.name} (kind={participant.kind})"
+    )
 
     call_duration = {"seconds": 0}
 
