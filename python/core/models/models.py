@@ -1,65 +1,13 @@
 from enum import StrEnum
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional, TypedDict, Union
-
-
-class EndCallScenarioDto(TypedDict):
-    id: int
-    scenario: str
-    agent: int
-    createdAt: datetime
-    updatedAt: datetime
-
-
-class AgentDto(TypedDict):
-    id: int
-    name: str
-    voiceModelName: str
-    aiDefinedMessage: Optional[str]
-    instructions: Optional[str]
-    initiationMode: Optional[str]
-    active: bool
-    knowledgeBaseTrigger: Optional[bool]
-    waitForUser: int
-    user: int
-    endCallScenarios: list[EndCallScenarioDto]
-    createdAt: datetime
-    updatedAt: datetime
-
-
-class InitiationMode(StrEnum):
-    user_initiates = "User Initiates"
-    ai_initiates_dynamic = "AI Initiates (Dynamic Message)"
-    ai_initiates_defined = "AI Initiates (Defined Message)"
-
-
-class SessionRequest(BaseModel):
-    voiceModelName: str
-    initiationMode: InitiationMode = InitiationMode.ai_initiates_dynamic
-    knowledgeBaseTrigger: Optional[bool] = False
-    initialMessage: Optional[str] = None
-    instructions: Union[str, list[str]]
-
-
-class SessionRequestDict(TypedDict):
-    voiceModelName: str
-    initiationMode: InitiationMode
-    instructions: Union[str, list[str]]
-    knowledgeBaseTrigger: Optional[bool]
-    initialMessage: Optional[str]
+from typing import Optional
 
 
 class IsSpam(StrEnum):
     SPAM = "SPAM"
     NOT_SPAM = "NOT_SPAM"
     NOT_SURE = "NOT_SURE"
-
-
-class AgentType(StrEnum):
-    WEB_AGENT = "WEB_AGENT"
-    PHONE_AGENT_TEST = "PHONE_AGENT_TEST"
-    PHONE_AGENT_REGULAR = "PHONE_AGENT_REGULAR"
 
 
 class CallbackRequired(StrEnum):

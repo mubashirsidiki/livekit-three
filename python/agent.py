@@ -131,16 +131,12 @@ async def _on_session_end(
     ctx: agents.JobContext,
     call_duration: int,
 ) -> None:
-    LOG.info("end session reached!!!!!!!!!!!")
-
     LOG.info(f"call duration: {call_duration['seconds']}")
 
     report = ctx.make_session_report()
     summarizer = inference.LLM(model="google/gemini-2.5-flash")
 
     classification = await _extract_call_metadata(summarizer, report.chat_history)
-
-    LOG.info("end session reached!!!!!!!!!!!")
 
     if classification:
         LOG.info(f"Call Classification: {classification.model_dump_json()}")
@@ -170,26 +166,7 @@ async def entrypoint(ctx: agents.JobContext):
     await ctx.connect()
 
     participant = await ctx.wait_for_participant()
-    LOG.info(f"attributes, {participant.attributes}")
-
-    LOG.info(f"ctx room, {ctx.room.name}")
-    LOG.info(
-        f"participant. {participant.sid} {participant.identity} {participant.name}"
-    )
-
-    LOG.info(f"participant kind: {participant.kind}")
-
-    # access_token = participant.attributes.get("agentToken")
-    # agent_id = int(participant.attributes.get("agentId"))
-
-    LOG.info(f"Agent: {rtc.ParticipantKind.PARTICIPANT_KIND_AGENT}")
-    LOG.info(f"Connector: {rtc.ParticipantKind.PARTICIPANT_KIND_CONNECTOR}")
-    LOG.info(f"Egress: {rtc.ParticipantKind.PARTICIPANT_KIND_EGRESS}")
-    LOG.info(f"Ingress: {rtc.ParticipantKind.PARTICIPANT_KIND_INGRESS}")
-    LOG.info(f"Standard: {rtc.ParticipantKind.PARTICIPANT_KIND_STANDARD}")
-    LOG.info(f"SIP: {rtc.ParticipantKind.PARTICIPANT_KIND_SIP}")
-
-    LOG.info("participant attributes has been fetched")
+    LOG.info(f"Participant: {participant.sid} {participant.identity} {participant.name} (kind={participant.kind})")
 
     call_duration = {"seconds": 0}
 
@@ -228,7 +205,6 @@ async def entrypoint(ctx: agents.JobContext):
     await session.start(
         room=ctx.room,
         agent=Assistant(
-            # instructions=instructions,
             tools=[
                 function_tool(
                     end_call,
