@@ -11,6 +11,7 @@ from livekit.agents import (
     inference,
     room_io,
     RunContext,
+    TurnHandlingOptions,
     function_tool,
     ConversationItemAddedEvent,
     UserStateChangedEvent,
@@ -186,7 +187,9 @@ async def entrypoint(ctx: agents.JobContext):
             voice="Craig",
         ),
         vad=silero.VAD.load(),
-        turn_detection=MultilingualModel(),
+        turn_handling=TurnHandlingOptions(
+            turn_detection=MultilingualModel(),
+        ),
         user_away_timeout=wait_for_user,
     )
 
