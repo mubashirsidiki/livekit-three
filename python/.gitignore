@@ -1,0 +1,8 @@
+.env.local
+livekit.toml
+__pycache__
+.claude
+.venv
+venv
+.ruff_cache
+.mypy_cache

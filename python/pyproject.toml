@@ -1,0 +1,15 @@
+[project]
+name = "livekit-gemini"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "livekit-agents[openai]>=1.5.1",
+    "livekit-plugins-noise-cancellation>=0.1",
+    "livekit-plugins-silero>=0.5.1",
+    "livekit-plugins-turn-detector>=1.5.1",
+    "python-dotenv>=1.2.1",
+    "pydantic>=2.12.5",
+    "aiohttp>=3.9",
+    "openai>=1.0",
+    "handlebars>=0.1",
+]
