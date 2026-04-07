@@ -68,12 +68,6 @@ async def end_call(
     # after the tool call completes
 
 
-end_call_default_intent = """End the current call/conversation.
-    Speaks a farewell message and ends the call.
-    No return value - the call ends immediately after the goodbye message.
-    """
-
-
 def _build_transcript(chat_ctx: ChatContext) -> str:
     items = [
         f"{item.role}: {item.text_content}"
@@ -147,7 +141,6 @@ async def _on_session_end(
 
 server = AgentServer(initialize_process_timeout=60)
 
-
 @server.rtc_session()
 async def entrypoint(ctx: agents.JobContext):
     await ctx.connect()
@@ -167,7 +160,10 @@ async def entrypoint(ctx: agents.JobContext):
 
     ctx.add_shutdown_callback(shutdown_callback)
 
-    end_call_description = end_call_default_intent
+    end_call_description = """End the current call/conversation.
+    Speaks a farewell message and ends the call.
+    No return value - the call ends immediately after the goodbye message.
+    """
     wait_for_user = 5
 
     session = AgentSession(
