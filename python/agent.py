@@ -22,6 +22,22 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from core.logging.logger import LOG
 from core.models import CallClassification
+from constants import (
+    ASSISTANT_DEFAULT_INSTRUCTIONS,
+    CALL_CLASSIFICATION_PROMPT,
+    END_CALL_DESCRIPTION,
+    END_CALL_GOODBYE,
+    GENERATE_REPLY_INSTRUCTIONS,
+    LLM_MODEL,
+    STT_LANGUAGE,
+    STT_MODEL,
+    TTS_LANGUAGE,
+    TTS_MODEL,
+    TTS_VOICE,
+    USER_AWAY_GOODBYE,
+    USER_AWAY_PROMPT,
+    WAIT_FOR_USER_SECONDS,
+)
 
 load_dotenv(".env.local")
 
@@ -33,12 +49,7 @@ class Assistant(Agent):
         chat_ctx: llm.ChatContext | None = None,
         tools: list[llm.Tool | llm.Toolset] | None = None,
     ) -> None:
-        default_instructions = """
-You are a helpful, friendly voice AI assistant with a warm and engaging personality.
-You assist users with their questions and requests using your extensive knowledge.
-Keep your responses concise, natural, and conversational.
-Avoid complex formatting, emojis, or special punctuation.
-"""
+        default_instructions = ASSISTANT_DEFAULT_INSTRUCTIONS
 
         super().__init__(
             instructions=instructions or default_instructions,
@@ -55,7 +66,7 @@ async def end_call(
     # Speak goodbye message before ending the call
     # Don't await say() directly in tool calls - use wait_for_playout()
     context.session.say(
-        "Thank you for calling Champion. Have a great day. Goodbye!",
+        END_CALL_GOODBYE,
         allow_interruptions=False,
     )
 
@@ -92,14 +103,7 @@ async def _extract_call_metadata(
         role="system",
         content=(
             f"Current date and time: {datetime.now(timezone.utc).isoformat()}\n\n"
-            "Analyze this phone call transcript and extract:\n"
-            "1. is_spam: SPAM if sales/marketing, NOT_SPAM if legitimate inquiry, NOT_SURE if unclear\n"
-            "2. reason_for_call: Brief reason the caller contacted\n"
-            "3. callback_required: YES if caller needs follow-up, NO if resolved, NOT_SURE if unclear\n"
-            "4. callback_required_reason: Why callback is or isn't needed\n"
-            "5. caller_name: Name if provided, else None\n"
-            "6. calendar_event: If caller mentioned scheduling, extract title, description, start_time, end_time (ISO 8601 format: YYYY-MM-DDTHH:MM:SS)\n\n"
-            "Be precise. Use null for unknown values."
+            f"{CALL_CLASSIFICATION_PROMPT}"
         ),
     )
     classification_ctx.add_message(role="user", content=transcript)
@@ -141,6 +145,7 @@ async def _on_session_end(
 
 server = AgentServer(initialize_process_timeout=60)
 
+
 @server.rtc_session()
 async def entrypoint(ctx: agents.JobContext):
     await ctx.connect()
@@ -160,33 +165,28 @@ async def entrypoint(ctx: agents.JobContext):
 
     ctx.add_shutdown_callback(shutdown_callback)
 
-    end_call_description = """End the current call/conversation.
-    Speaks a farewell message and ends the call.
-    No return value - the call ends immediately after the goodbye message.
-    """
-    wait_for_user = 5
-
+    end_call_description = END_CALL_DESCRIPTION
     session = AgentSession(
-        stt=inference.STT("deepgram/nova-2-phonecall", language="en"),
-        llm=inference.LLM(model="gpt-4o"),
-        # llm=openai.responses.LLM(model="gpt-5-mini", reasoning=Reasoning(effort="minimal")),
-        # llm=inference.LLM("openai/gpt-5-mini",
+        stt=inference.STT(STT_MODEL, language=STT_LANGUAGE),
+        llm=inference.LLM(model=LLM_MODEL),
+        # llm=openai.responses.LLM(model=LLM_ALTERNATIVE_MODEL, reasoning=Reasoning(effort=LLM_ALTERNATIVE_REASONING_EFFORT)),
+        # llm=inference.LLM(LLM_ALTERNATIVE_MODEL,
         #                   provider="openai",
         #                   extra_kwargs={
-        #                       "reasoning_effort": "minimal",
-        #                       "verbosity": "low",
+        #                       "reasoning_effort": LLM_ALTERNATIVE_REASONING_EFFORT,
+        #                       "verbosity": LLM_ALTERNATIVE_VERBOSITY,
         #                 }
         #                 ),
         tts=inference.TTS(
-            "inworld/inworld-tts-1.5-max",
-            language="en",
-            voice="Craig",
+            TTS_MODEL,
+            language=TTS_LANGUAGE,
+            voice=TTS_VOICE,
         ),
         vad=silero.VAD.load(),
         turn_handling=TurnHandlingOptions(
             turn_detection=MultilingualModel(),
         ),
-        user_away_timeout=wait_for_user,
+        user_away_timeout=WAIT_FOR_USER_SECONDS,
     )
 
     await session.start(
@@ -224,15 +224,15 @@ async def entrypoint(ctx: agents.JobContext):
             # Use session.say() to speak directly (no LLM processing)
             # add_to_chat_ctx=True keeps these messages in transcript for analytics
             await session.say(
-                "Are you still there Champion?",
+                USER_AWAY_PROMPT,
                 allow_interruptions=True,
                 add_to_chat_ctx=True,
             )
 
-            await asyncio.sleep(wait_for_user)
+            await asyncio.sleep(WAIT_FOR_USER_SECONDS)
 
             await session.say(
-                "Thank you for your time Champion. Goodbye!",
+                USER_AWAY_GOODBYE,
                 allow_interruptions=True,
                 add_to_chat_ctx=True,
             )
@@ -267,7 +267,7 @@ async def entrypoint(ctx: agents.JobContext):
         call_duration["seconds"] = (call_ended_at - call_started_at).total_seconds()
 
     await session.generate_reply(
-        instructions="Greet the user warmly and ask how you can help.",
+        instructions=GENERATE_REPLY_INSTRUCTIONS,
         allow_interruptions=True,
     )
 
