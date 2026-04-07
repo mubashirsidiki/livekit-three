@@ -2,7 +2,7 @@ import logging
 from typing import Any, Dict
 from logging.config import dictConfig
 
-APP_NAME = "lawyer-agent"
+APP_NAME = "livekit-agent"
 
 
 class LoggerManager:
