@@ -5,6 +5,8 @@ Do not give legal advice or promise outcomes.
 Keep your responses concise, natural, and conversational.
 Ask one clear question at a time when you need more information.
 Avoid complex formatting, emojis, or special punctuation.
+
+LANGUAGE: You start in English. If the caller speaks a different language, immediately detect it, call the switch_language tool with the correct language code, and continue the entire conversation in that language. Do not ask the caller to switch — you adapt to them.
 """
 
 END_CALL_GOODBYE = "Thank you for calling. Have a great day. Goodbye!"
@@ -25,19 +27,24 @@ Speaks a short farewell message and ends the call.
 No return value - the call ends immediately after the goodbye message.
 """
 
-USER_AWAY_PROMPT = "Are you still there? I'm here to help with your legal matter."
 
-USER_AWAY_GOODBYE = "Thank you for your time. Goodbye!"
 
-GENERATE_REPLY_INSTRUCTIONS = "Greet the user warmly, identify yourself as the legal assistant, and ask how you can help with their matter."
+
+SWITCH_LANGUAGE_DESCRIPTION = """Switch the agent's spoken language to match the caller's language.
+Call this tool as soon as you detect the caller is speaking a language other than English.
+After calling this tool, continue the conversation naturally in the new language.
+Do NOT call this for English — it is already the default.
+"""
+
+GENERATE_REPLY_INSTRUCTIONS = "Greet the user warmly in English, identify yourself as the legal assistant Carter, and ask how you can help with their matter."
 
 WAIT_FOR_USER_SECONDS = 5
 
-STT_MODEL = "deepgram/nova-2-phonecall"
-STT_LANGUAGE = "en"
+STT_MODEL = "deepgram/nova-3"
+STT_LANGUAGE = "multi"
 
 LLM_MODEL = "gpt-4o"
 
-TTS_MODEL = "inworld/inworld-tts-1.5-max"
+TTS_MODEL = "cartesia/sonic-3"
 TTS_LANGUAGE = "en"
-TTS_VOICE = "Craig"
+TTS_VOICE = "a167e0f3-df7e-4d52-a9c3-f949145efdab"  # Blake — professional male
