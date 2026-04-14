@@ -1,7 +1,7 @@
 from enum import StrEnum
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, TypedDict
 
 
 class IsSpam(StrEnum):
@@ -27,6 +27,15 @@ class ServicePricing(BaseModel):
     name: Optional[str] = None
     price_from: Optional[int] = None
     price_to: Optional[int] = None
+
+
+class PromptDto(TypedDict):
+    id: str
+    instructions: str
+    end_call_intent: str
+    wait_for_user: int
+    created_at: datetime
+    updated_at: datetime
 
 
 class CallClassification(BaseModel):

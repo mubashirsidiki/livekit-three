@@ -4,6 +4,7 @@ from .models import (
     CalendarEvent,
     CallClassification,
     CallMetadata,
+    PromptDto,
 )
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "CalendarEvent",
     "CallClassification",
     "CallMetadata",
+    "PromptDto",
 ]

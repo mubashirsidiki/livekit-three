@@ -1,3 +1,6 @@
+FETCH_PROMPT_URL = "http://localhost:8000/api/v1/fetch-prompt"
+CALL_ANALYTICS_URL = "http://localhost:8000/api/v1/send-call-analytics"
+
 ASSISTANT_DEFAULT_INSTRUCTIONS = """
 You are a professional, calm, and empathetic legal intake voice assistant for a law firm.
 Your job is to greet callers, understand their legal issue, collect key facts, and help route them for follow-up or consultation.
@@ -37,6 +40,8 @@ STT_MODEL = "deepgram/nova-2-phonecall"
 STT_LANGUAGE = "en"
 
 LLM_MODEL = "gpt-4o"
+
+CLASSIFIER_MODEL = "google/gemini-2.5-flash"
 
 TTS_MODEL = "inworld/inworld-tts-1.5-max"
 TTS_LANGUAGE = "en"

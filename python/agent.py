@@ -21,7 +21,8 @@ from livekit.plugins import noise_cancellation, silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from core.logging.logger import LOG
-from core.models import CallClassification
+from core.models import CallClassification, CallMetadata
+from core.clients import backend_client
 from constants import (
     ASSISTANT_DEFAULT_INSTRUCTIONS,
     CALL_CLASSIFICATION_PROMPT,
@@ -37,6 +38,7 @@ from constants import (
     USER_AWAY_GOODBYE,
     USER_AWAY_PROMPT,
     WAIT_FOR_USER_SECONDS,
+    CLASSIFIER_MODEL,
 )
 
 load_dotenv(".env.local")
@@ -92,7 +94,7 @@ def _build_transcript(chat_ctx: ChatContext) -> str:
 
 
 async def _extract_call_metadata(
-    summarizer: inference.LLM, chat_ctx: ChatContext
+    classifier: inference.LLM, chat_ctx: ChatContext
 ) -> CallClassification | None:
     transcript = _build_transcript(chat_ctx)
     if not transcript:
@@ -109,7 +111,7 @@ async def _extract_call_metadata(
     classification_ctx.add_message(role="user", content=transcript)
 
     try:
-        async with summarizer.chat(
+        async with classifier.chat(
             chat_ctx=classification_ctx,
             response_format=CallClassification,
         ) as stream:
@@ -128,17 +130,34 @@ async def _extract_call_metadata(
 
 async def _on_session_end(
     ctx: agents.JobContext,
-    call_duration: int,
+    access_token: str,
+    call_duration: dict,
 ) -> None:
     LOG.info(f"call duration: {call_duration['seconds']}")
 
     report = ctx.make_session_report()
-    summarizer = inference.LLM(model="google/gemini-2.5-flash")
+    classifier = inference.LLM(model=CLASSIFIER_MODEL)
 
-    classification = await _extract_call_metadata(summarizer, report.chat_history)
+    classification = await _extract_call_metadata(classifier, report.chat_history)
 
     if classification:
         LOG.info(f"Call Classification: {classification.model_dump_json()}")
+
+        metadata = CallMetadata(
+            call_datetime=datetime.now(timezone.utc),
+            call_transcript=_build_transcript(report.chat_history),
+            is_spam=classification.is_spam,
+            reason_for_call=classification.reason_for_call,
+            callback_required=classification.callback_required,
+            callback_required_reason=classification.callback_required_reason,
+            caller_name=classification.caller_name,
+            calendar_event=classification.calendar_event,
+            service_pricing=classification.service_pricing,
+            call_duration=round(call_duration["seconds"]),
+        )
+
+        if access_token:
+            await backend_client.send_call_analytics(access_token, metadata)
     else:
         LOG.info("No classification generated for session")
 
@@ -155,15 +174,22 @@ async def entrypoint(ctx: agents.JobContext):
         f"Participant: {participant.sid} {participant.identity} {participant.name} (kind={participant.kind})"
     )
 
+    prompt_id = participant.attributes.get("promptId", "")
+    access_token = participant.attributes.get("accessToken", "")
+
     call_duration = {"seconds": 0}
 
     async def shutdown_callback():
         await _on_session_end(
             ctx,
+            access_token,
             call_duration,
         )
 
-    ctx.add_shutdown_callback(shutdown_callback)
+    # ctx.add_shutdown_callback(shutdown_callback)
+
+    config = await backend_client.fetch_prompt(access_token, prompt_id)
+    instructions = config.get("instructions", ASSISTANT_DEFAULT_INSTRUCTIONS)
 
     end_call_description = END_CALL_DESCRIPTION
     session = AgentSession(
@@ -192,6 +218,7 @@ async def entrypoint(ctx: agents.JobContext):
     await session.start(
         room=ctx.room,
         agent=Assistant(
+            instructions=instructions,
             tools=[
                 function_tool(
                     end_call,
