@@ -65,12 +65,11 @@ class Assistant(Agent):
         model_settings: ModelSettings,
     ) -> AsyncIterable[str | llm.ChatChunk]:
         # Extract last user message
-        user_messages = [
-            item
-            for item in chat_ctx.items
-            if item.type == "message" and item.role == "user"
-        ]
-        last_message = user_messages[-1].text_content if user_messages else ""
+        last_message = next(
+            (item.text_content for item in reversed(chat_ctx.items)
+             if item.type == "message" and item.role == "user"),
+            "",
+        )
         if not last_message:
             return
 
