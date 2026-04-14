@@ -35,9 +35,8 @@ from constants import (
     TTS_LANGUAGE,
     TTS_MODEL,
     TTS_VOICE,
-    USER_AWAY_GOODBYE,
-    USER_AWAY_PROMPT,
     WAIT_FOR_USER_SECONDS,
+    SWITCH_LANGUAGE_DESCRIPTION,
     CLASSIFIER_MODEL,
 )
 
@@ -58,6 +57,14 @@ class Assistant(Agent):
             chat_ctx=chat_ctx,
             tools=tools,
         )
+
+
+async def switch_language(context: RunContext, language_code: str):
+    """Switch the agent's TTS language so speech output matches the caller's language."""
+    tts = context.session.tts
+    if tts is not None:
+        tts.update_options(language=language_code)
+        LOG.info(f"Switched TTS language to: {language_code}")
 
 
 async def end_call(
@@ -221,10 +228,15 @@ async def entrypoint(ctx: agents.JobContext):
             instructions=instructions,
             tools=[
                 function_tool(
+                    switch_language,
+                    name="switch_language",
+                    description=SWITCH_LANGUAGE_DESCRIPTION,
+                ),
+                function_tool(
                     end_call,
                     name="end_call",
                     description=end_call_description,
-                )
+                ),
             ],
         ),
         room_options=room_io.RoomOptions(
@@ -248,18 +260,17 @@ async def entrypoint(ctx: agents.JobContext):
 
     async def user_presence_task():
         try:
-            # Use session.say() to speak directly (no LLM processing)
-            # add_to_chat_ctx=True keeps these messages in transcript for analytics
-            await session.say(
-                USER_AWAY_PROMPT,
+            # Use generate_reply so the LLM responds in the current language
+            await session.generate_reply(
+                instructions="CRITICAL: Look at the conversation history. Identify the language the caller has been speaking. You MUST respond in that EXACT same language — NOT English unless the caller was speaking English. The caller has been silent. Ask if they're still there. Be warm and brief.",
                 allow_interruptions=True,
                 add_to_chat_ctx=True,
             )
 
             await asyncio.sleep(WAIT_FOR_USER_SECONDS)
 
-            await session.say(
-                USER_AWAY_GOODBYE,
+            await session.generate_reply(
+                instructions="CRITICAL: Look at the conversation history. Identify the language the caller has been speaking. You MUST say goodbye in that EXACT same language — NOT English unless the caller was speaking English. Say a brief, polite goodbye now.",
                 allow_interruptions=True,
                 add_to_chat_ctx=True,
             )

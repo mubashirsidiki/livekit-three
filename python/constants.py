@@ -28,6 +28,12 @@ Speaks a short farewell message and ends the call.
 No return value - the call ends immediately after the goodbye message.
 """
 
+SWITCH_LANGUAGE_DESCRIPTION = """Switch the agent's spoken language to match the caller's language (supports English and Dutch).
+Call this tool as soon as you detect the caller is speaking Dutch.
+After calling this tool, continue the conversation naturally in the new language.
+Do NOT call this for English — it is already the default.
+"""
+
 USER_AWAY_PROMPT = "Are you still there? I'm here to help with your legal matter."
 
 USER_AWAY_GOODBYE = "Thank you for your time. Goodbye!"
