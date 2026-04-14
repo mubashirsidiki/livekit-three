@@ -1,3 +1,3 @@
-from .backend import backend_client
+from .jambhala import jambhala_client
 
-__all__ = ["backend_client"]
+__all__ = ["jambhala_client"]

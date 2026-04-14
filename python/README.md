@@ -9,18 +9,20 @@ You can talk to this agent from the terminal, browser, or phone.
 This agent is built with a standard STT → LLM → TTS voice pipeline powered by LiveKit Inference.
 
 - **Speech-to-Text:** Deepgram Nova-2 Phonecall
-- **Language Model:** Google Gemini 2.5 Flash
+- **Language Model:** Jambhala AI Chatbot API (custom LLM via `llm_node` override, with GPT-4o fallback for tool calls)
 - **Text-to-Speech:** Inworld TTS 1.5 Max (voice: Craig)
 - **Voice Activity Detection:** Silero
 - **Turn Detection:** Multilingual model
 
-All models run through LiveKit's managed inference layer.
+All models (except Jambhala) run through LiveKit's managed inference layer.
 
 ## Key Features
 
+- **Custom LLM Integration:** Uses Jambhala AI chatbot API as the primary LLM via `llm_node` override
+- **Multilingual Support:** Auto-detects caller language and switches TTS output (English/Dutch)
 - **Silence Detection:** Auto-prompts after 5s silence, ends call after 10s
-- **Call Analytics:** Automatic call classification (spam detection, callback requirements)
 - **Noise Cancellation:** BVC for regular calls, BVC Telephony for SIP calls
+- **Tool Calling:** End call and language switching handled by default LLM (GPT-4o)
 
 ## Prerequisites
 
@@ -130,10 +132,11 @@ uv run agent.py start
 ## Agent Behavior
 
 - Greets users when they connect
-- Responds to natural speech in real time
+- Responds to natural speech in real time via Jambhala AI
 - Supports interruptions and turn-taking
 - Automatic silence detection and call termination
-- Call classification and analytics on session end
+- Multilingual responses (English/Dutch)
+- Falls back to default LLM when tools are needed or Jambhala API fails
 - Room lifecycle is managed by LiveKit Cloud
 
 ## Cost Analysis
