@@ -18,6 +18,7 @@ from livekit.agents import (
 from livekit.agents.beta import EndCallTool
 from livekit.plugins import openai, silero, noise_cancellation  # type: ignore[attr-defined]
 
+from core.database import fetch_agent_config, save_call_record
 from core.logging.logger import LOG
 from core.models import CallClassification
 from constants import (
@@ -85,9 +86,9 @@ async def _classify_call(chat_ctx: ChatContext) -> CallClassification | None:
 
 
 class Assistant(Agent):
-    def __init__(self) -> None:
+    def __init__(self, *, instructions: str | None = None) -> None:
         super().__init__(
-            instructions=ASSISTANT_DEFAULT_INSTRUCTIONS,
+            instructions=instructions or ASSISTANT_DEFAULT_INSTRUCTIONS,
             tools=[
                 EndCallTool(
                     end_instructions="say a brief, warm goodbye to the user IN THE SAME LANGUAGE the conversation has been happening in",
@@ -154,6 +155,16 @@ async def entrypoint(ctx: agents.JobContext):
         f"Participant: {participant.sid} {participant.identity} {participant.name} (kind={participant.kind})"
     )
 
+    # Fetch instructions from MongoDB
+    config = fetch_agent_config()
+    instructions = config.get("instructions")
+
+    if instructions:
+        instructions = f"Current date and time: {datetime.now(timezone.utc).isoformat()}\n\n{instructions}"
+        LOG.info("Loaded instructions from MongoDB")
+    else:
+        LOG.info("Using default instructions from constants")
+
     call_started_at = datetime.now(tz=timezone.utc)
     inactivity_task: asyncio.Task | None = None
 
@@ -169,7 +180,7 @@ async def entrypoint(ctx: agents.JobContext):
 
     await session.start(
         room=ctx.room,
-        agent=Assistant(),
+        agent=Assistant(instructions=instructions),
         room_options=room_io.RoomOptions(
             delete_room_on_close=True,
             audio_input=room_io.AudioInputOptions(
@@ -216,6 +227,24 @@ async def entrypoint(ctx: agents.JobContext):
             )
             if classification:
                 LOG.info(f"Call Classification: {classification.model_dump_json()}")
+
+                transcript = _build_transcript(session.history)
+                duration = (datetime.now(tz=timezone.utc) - call_started_at).total_seconds()
+                save_call_record({
+                    "room_name": ctx.room.name,
+                    "participant_identity": participant.identity,
+                    "caller_name": classification.caller_name,
+                    "is_spam": classification.is_spam.value if classification.is_spam else None,
+                    "reason_for_call": classification.reason_for_call,
+                    "callback_required": classification.callback_required.value if classification.callback_required else None,
+                    "callback_required_reason": classification.callback_required_reason,
+                    "case_type": classification.case_type.value if classification.case_type else None,
+                    "urgency": classification.urgency.value if classification.urgency else None,
+                    "qualification_score": classification.qualification_score.value if classification.qualification_score else None,
+                    "recommended_next_steps": classification.recommended_next_steps,
+                    "transcript": transcript,
+                    "duration_seconds": duration,
+                })
             else:
                 LOG.info("No classification generated for session")
         except TimeoutError:

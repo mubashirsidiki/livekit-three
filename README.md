@@ -2,39 +2,24 @@
 
 Voice AI agent for law firm call intake with real-time transcription, call classification, and post-call analytics.
 
-## Architecture
-
-**Python Agent** — LiveKit Agents SDK with OpenAI Realtime API (gpt-realtime-mini), Silero VAD, noise cancellation, user presence detection, and automatic call classification. See [python/README.md](python/README.md) for full setup.
-
-**Agent UI (Next.js)** — Frontend with LiveKit voice session, real-time transcript capture via `useTranscriptions`, and post-call analytics powered by OpenAI (spam detection, case type classification, urgency scoring, lead qualification, recommended next steps).
-
-## Quick Start
-
-### Python Agent
-
-```bash
-cd python
-uv sync
-uv run agent.py download-files
-uv run agent.py dev
+```
+Python Agent (LiveKit Cloud) ──► MongoDB ◄── Next.js Frontend (Vercel)
+          (writes call records)    (shared DB)    (reads & displays)
 ```
 
-Deploy to LiveKit Cloud with `lk agent deploy`. See [python/README.md](python/README.md) for full CLI setup.
+## Projects
 
-### Agent UI
-
-```bash
-cd agent-ui
-cp .env.example .env   # fill in LiveKit + CLASSIFY_API_KEY
-npm install && npm run dev
-```
-
-Required env vars: `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_URL`, `NEXT_PUBLIC_LIVEKIT_URL`, `CLASSIFY_API_KEY` (Google Gemini API key for call classification).
+- **[python/](python/)** — LiveKit voice agent (OpenAI Realtime API, call classification). See [python/README.md](python/README.md).
+- **[agent-ui/](agent-ui/)** — Next.js frontend (LiveKit Agents UI starter). See [agent-ui/README.md](agent-ui/README.md).
+- **[agent-ui/VERCEL.md](agent-ui/VERCEL.md)** — Vercel deployment quick start (env vars, dev, deploy commands).
 
 ## Features
 
 - Real-time voice conversation with AI legal intake agent
 - Post-call analytics: spam detection, case type, urgency, lead qualification
-- Full transcript capture and display after call ends
-- Dark/light theme with Sterling & Associates branding
-- OpenAI-powered call classification with automatic model fallback
+- Customer view with call transcript and classification
+- Admin dashboard: call records, urgency flags, settings editor, reports
+- Dynamic prompt updates via admin UI (no redeployment needed)
+- Urgency email alerts (configurable via `SMTP_ENABLED`)
+- Daily and monthly report generation
+- MongoDB-backed persistence

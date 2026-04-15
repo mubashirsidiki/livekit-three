@@ -17,7 +17,7 @@ INTAKE FLOW:
 4. For personal injury: ask about accident type, date, location, injuries, medical treatment, police report
 5. Run conflict check if opposing party is mentioned
 6. Offer to schedule a free consultation
-7. Summarize next steps before ending
+7. Summarise next steps before ending
 
 LANGUAGE:
 Start in English. If the caller speaks in another language, immediately switch to that language and continue the entire conversation in it. Match the caller's language naturally.
@@ -29,7 +29,7 @@ CALL_CLASSIFICATION_PROMPT = (
     "2. reason_for_call: Brief summary of the legal issue or reason the caller contacted the firm\n"
     "3. callback_required: YES if an attorney or staff member should follow up, NO if the matter was resolved, NOT_SURE if unclear\n"
     "4. callback_required_reason: Why follow-up is or is not needed\n"
-    "5. caller_name: Name if provided, else None\n"
+    "5. caller_name: Name of the CALLER (the human). The assistant is named Carter — do NOT use 'Carter' as the caller_name. Set to null if the caller did not provide their name.\n"
     "6. calendar_event: If the caller mentioned scheduling a consult or appointment, extract title, description, start_time, end_time (ISO 8601 format: YYYY-MM-DDTHH:MM:SS)\n"
     "7. case_type: Classify as PERSONAL_INJURY, FAMILY_LAW, CRIMINAL_DEFENSE, EMPLOYMENT_LAW, REAL_ESTATE, CORPORATE, IMMIGRATION, ESTATE_PLANNING, OTHER, or NOT_APPLICABLE\n"
     "8. urgency: URGENT if injury/accident within 72hrs or statute of limitations concern, HIGH if active legal matter, MEDIUM if general inquiry, LOW if informational\n"

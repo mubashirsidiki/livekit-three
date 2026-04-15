@@ -33,20 +33,20 @@ export interface AppConfig {
 }
 
 export const APP_CONFIG_DEFAULTS: AppConfig = {
-  companyName: 'LiveKit',
-  pageTitle: 'LiveKit Voice Agent',
-  pageDescription: 'A voice agent built with LiveKit',
+  companyName: 'Sterling & Associates',
+  pageTitle: 'Sterling & Associates Law Firm',
+  pageDescription: 'Legal intake assistant powered by AI voice technology',
 
   supportsChatInput: true,
   supportsVideoInput: true,
   supportsScreenShare: true,
   isPreConnectBufferEnabled: true,
 
-  logo: '/lk-logo.svg',
-  accent: '#002cf2',
-  logoDark: '/lk-logo-dark.svg',
-  accentDark: '#1fd5f9',
-  startButtonText: 'Start call',
+  logo: '/sterling-logo.svg',
+  accent: '#1a365d',
+  logoDark: '/sterling-logo-dark.svg',
+  accentDark: '#c9a84c',
+  startButtonText: 'Start Call',
 
   // optional: audio visualization configuration
   // audioVisualizerType: 'bar',

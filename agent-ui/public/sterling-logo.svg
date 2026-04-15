@@ -1,0 +1,21 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Scales of Justice - Navy Blue -->
+  <!-- Center pillar -->
+  <rect x="30" y="12" width="4" height="36" rx="1" fill="#1a365d"/>
+  <!-- Base -->
+  <rect x="22" y="48" width="20" height="4" rx="2" fill="#1a365d"/>
+  <rect x="26" y="44" width="12" height="4" rx="1" fill="#1a365d"/>
+  <!-- Top beam -->
+  <rect x="12" y="10" width="40" height="4" rx="2" fill="#1a365d"/>
+  <!-- Top ornament -->
+  <circle cx="32" cy="9" r="5" fill="#1a365d"/>
+  <circle cx="32" cy="9" r="3" fill="#ffffff"/>
+  <!-- Left chain -->
+  <line x1="14" y1="14" x2="14" y2="28" stroke="#1a365d" stroke-width="2"/>
+  <!-- Left pan -->
+  <path d="M6 28 L22 28 L19 36 L9 36 Z" fill="#1a365d"/>
+  <!-- Right chain -->
+  <line x1="50" y1="14" x2="50" y2="24" stroke="#1a365d" stroke-width="2"/>
+  <!-- Right pan -->
+  <path d="M42 24 L58 24 L55 32 L45 32 Z" fill="#1a365d"/>
+</svg>

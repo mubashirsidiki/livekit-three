@@ -18,12 +18,7 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL;
 export const revalidate = 0;
 
 export async function POST(req: Request) {
-  if (process.env.NODE_ENV !== 'development') {
-    throw new Error(
-      'THIS API ROUTE IS INSECURE. DO NOT USE THIS ROUTE IN PRODUCTION WITHOUT AN AUTHENTICATION LAYER.'
-    );
-  }
-
+  // NOTE: This route has no authentication. Add auth before deploying to production.
   try {
     if (LIVEKIT_URL === undefined) {
       throw new Error('LIVEKIT_URL is not defined');
@@ -36,7 +31,7 @@ export async function POST(req: Request) {
     }
 
     // Parse room config from request body.
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     // Recreate the RoomConfiguration object from JSON object.
     const roomConfig = body?.room_config
       ? RoomConfiguration.fromJson(body.room_config, { ignoreUnknownFields: true })
@@ -51,10 +46,6 @@ export async function POST(req: Request) {
       {
         identity: participantIdentity,
         name: participantName,
-        // attributes: {
-        //   agentId: process.env.AGENT_ID!,
-        //   agentToken: process.env.AGENT_TOKEN!,
-        // }
       },
       roomName,
       roomConfig!
