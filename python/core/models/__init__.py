@@ -1,15 +1,19 @@
 from .models import (
     IsSpam,
     CallbackRequired,
+    CaseType,
+    Urgency,
+    QualificationScore,
     CalendarEvent,
     CallClassification,
-    CallMetadata,
 )
 
 __all__ = [
     "IsSpam",
     "CallbackRequired",
+    "CaseType",
+    "Urgency",
+    "QualificationScore",
     "CalendarEvent",
     "CallClassification",
-    "CallMetadata",
 ]

@@ -1,5 +1,4 @@
 import logging
-from typing import Any, Dict
 from logging.config import dictConfig
 
 APP_NAME = "livekit-agent"
@@ -40,18 +39,4 @@ class LoggerManager:
         return logging.getLogger(APP_NAME)
 
 
-class ContextLoggerAdapter(logging.LoggerAdapter):
-    def process(self, msg: str, kwargs: Dict[str, Any]) -> tuple:
-        extra = self.extra.copy()
-        if "extra" in kwargs:
-            extra.update(kwargs["extra"])
-        kwargs["extra"] = extra
-        return msg, kwargs
-
-
-_logger_manager = LoggerManager()
-LOG = _logger_manager.logger
-
-
-def get_logger(**context) -> ContextLoggerAdapter:
-    return ContextLoggerAdapter(LOG, context)
+LOG = LoggerManager().logger

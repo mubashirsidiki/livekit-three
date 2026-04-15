@@ -1,12 +1,10 @@
-import os
 import json
 import logging
-import logging.handlers
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 class JsonFormatter(logging.Formatter):
-    def formatTime(self, record: logging.LogRecord, datefmt: str = None) -> str:
+    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
         dt = datetime.fromtimestamp(record.created)
         microseconds = int(record.msecs * 1000)
 
@@ -34,7 +32,7 @@ class JsonFormatter(logging.Formatter):
         }
 
         standard_attrs = set(
-            logging.LogRecord(None, None, "", 0, "", (), None).__dict__.keys()
+            logging.LogRecord("", 0, "", 0, "", (), None).__dict__.keys()  # type: ignore[arg-type]
         )
         extra_fields = {
             key: value
@@ -42,31 +40,4 @@ class JsonFormatter(logging.Formatter):
             if key not in standard_attrs
         }
         log_record.update(extra_fields)
-
         return json.dumps(log_record, ensure_ascii=False)
-
-
-class CustomTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
-    def __init__(self, *args, **kwargs):
-        self._log_directory = kwargs.pop("log_directory", "./logs")
-        super().__init__(*args, **kwargs)
-
-    def doRollover(self) -> None:
-        if self.stream:
-            self.stream.close()
-            self.stream = None
-
-        yesterday = datetime.now() - timedelta(days=1)
-        new_filename = os.path.join(
-            self._log_directory, f"{yesterday.strftime('%Y-%m-%d')}.log"
-        )
-
-        if os.path.exists(new_filename):
-            os.remove(new_filename)
-
-        if os.path.exists(self.baseFilename):
-            os.rename(self.baseFilename, new_filename)
-
-        self.stream = self._open()
-
-        self.rolloverAt = self.rolloverAt + self.interval

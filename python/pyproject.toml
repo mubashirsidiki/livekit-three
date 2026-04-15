@@ -3,10 +3,17 @@ name = "livekit-agent"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "livekit-agents>=1.5.1",
-    "livekit-plugins-silero>=1.5.1",
+    "livekit-agents[google,silero]>=1.5.2",
     "livekit-plugins-noise-cancellation>=0.2.5",
-    "livekit-plugins-turn-detector>=1.5.1",
     "python-dotenv>=1.2.1",
     "pydantic>=2.12.5",
+]
+
+[dependency-groups]
+dev = [
+    "black>=26.3.1",
+    "mypy>=1.20.1",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.2.0",
+    "ruff>=0.15.10",
 ]

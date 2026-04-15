@@ -1,39 +1,33 @@
 import asyncio
-from dotenv import load_dotenv
 from datetime import datetime, timezone
+from dotenv import load_dotenv
 
 from livekit import agents, rtc
 from livekit.agents import (
+    Agent,
     AgentServer,
     AgentSession,
-    Agent,
     ChatContext,
+    CloseEvent,
+    ConversationItemAddedEvent,
+    JobProcess,
+    UserStateChangedEvent,
     inference,
     room_io,
-    RunContext,
-    TurnHandlingOptions,
-    function_tool,
-    ConversationItemAddedEvent,
-    UserStateChangedEvent,
-    llm,
 )
-from livekit.plugins import noise_cancellation, silero
-from livekit.plugins.turn_detector.multilingual import MultilingualModel
+from livekit.agents.beta import EndCallTool
+from livekit.plugins import google, silero, noise_cancellation
 
 from core.logging.logger import LOG
 from core.models import CallClassification
 from constants import (
     ASSISTANT_DEFAULT_INSTRUCTIONS,
     CALL_CLASSIFICATION_PROMPT,
-    END_CALL_DESCRIPTION,
-    END_CALL_GOODBYE,
+    CLASSIFICATION_MODEL,
     GENERATE_REPLY_INSTRUCTIONS,
-    LLM_MODEL,
-    STT_LANGUAGE,
-    STT_MODEL,
-    TTS_LANGUAGE,
-    TTS_MODEL,
-    TTS_VOICE,
+    GEMINI_MODEL,
+    GEMINI_VOICE,
+    GEMINI_TEMPERATURE,
     USER_AWAY_GOODBYE,
     USER_AWAY_PROMPT,
     WAIT_FOR_USER_SECONDS,
@@ -42,41 +36,7 @@ from constants import (
 load_dotenv(".env.local")
 
 
-class Assistant(Agent):
-    def __init__(
-        self,
-        instructions: str | None = None,
-        chat_ctx: llm.ChatContext | None = None,
-        tools: list[llm.Tool | llm.Toolset] | None = None,
-    ) -> None:
-        default_instructions = ASSISTANT_DEFAULT_INSTRUCTIONS
-
-        super().__init__(
-            instructions=instructions or default_instructions,
-            chat_ctx=chat_ctx,
-            tools=tools,
-        )
-
-
-async def end_call(
-    context: RunContext,
-    # reason: str,
-):
-
-    # Speak goodbye message before ending the call
-    # Don't await say() directly in tool calls - use wait_for_playout()
-    context.session.say(
-        END_CALL_GOODBYE,
-        allow_interruptions=False,
-    )
-
-    # Wait for speech to complete using context method (best practice in tools)
-    await context.wait_for_playout()
-
-    context.session.shutdown(drain=True)
-
-    # Don't return anything - prevents LLM from generating another response
-    # after the tool call completes
+# --- Post-call classification helpers ---
 
 
 def _build_transcript(chat_ctx: ChatContext) -> str:
@@ -91,9 +51,7 @@ def _build_transcript(chat_ctx: ChatContext) -> str:
     return "\n".join(items)
 
 
-async def _extract_call_metadata(
-    summarizer: inference.LLM, chat_ctx: ChatContext
-) -> CallClassification | None:
+async def _classify_call(chat_ctx: ChatContext) -> CallClassification | None:
     transcript = _build_transcript(chat_ctx)
     if not transcript:
         return None
@@ -109,41 +67,82 @@ async def _extract_call_metadata(
     classification_ctx.add_message(role="user", content=transcript)
 
     try:
-        async with summarizer.chat(
-            chat_ctx=classification_ctx,
-            response_format=CallClassification,
-        ) as stream:
-            full_content = ""
-            async for chunk in stream:
-                if chunk.delta and chunk.delta.content:
-                    full_content += chunk.delta.content
-
-            if full_content:
-                return CallClassification.model_validate_json(full_content)
+        async with inference.LLM(model=CLASSIFICATION_MODEL) as llm:
+            async with llm.chat(
+                chat_ctx=classification_ctx,
+                response_format=CallClassification,  # type: ignore[call-arg]
+            ) as stream:
+                collected = await stream.collect()
+                if collected.text:
+                    return CallClassification.model_validate_json(collected.text)
     except Exception as e:
         LOG.error(f"Failed to extract call metadata: {e}")
 
     return None
 
 
-async def _on_session_end(
-    ctx: agents.JobContext,
-    call_duration: int,
-) -> None:
-    LOG.info(f"call duration: {call_duration['seconds']}")
+# --- Agent ---
 
-    report = ctx.make_session_report()
-    summarizer = inference.LLM(model="google/gemini-2.5-flash")
 
-    classification = await _extract_call_metadata(summarizer, report.chat_history)
+class Assistant(Agent):
+    def __init__(self) -> None:
+        super().__init__(
+            instructions=ASSISTANT_DEFAULT_INSTRUCTIONS,
+            tools=[
+                EndCallTool(
+                    end_instructions="say a brief, warm goodbye to the user IN THE SAME LANGUAGE the conversation has been happening in",
+                    delete_room=False,
+                ),
+            ],
+        )
 
-    if classification:
-        LOG.info(f"Call Classification: {classification.model_dump_json()}")
-    else:
-        LOG.info("No classification generated for session")
+    async def on_enter(self) -> None:
+        self.session.generate_reply(
+            instructions=GENERATE_REPLY_INSTRUCTIONS,
+            allow_interruptions=True,
+        )
+
+
+# --- User-away inactivity handler ---
+
+
+async def _user_presence_loop(session: AgentSession) -> None:
+    try:
+        await asyncio.sleep(WAIT_FOR_USER_SECONDS)
+
+        await session.generate_reply(
+            instructions=USER_AWAY_PROMPT,
+            allow_interruptions=True,
+        )
+
+        await asyncio.sleep(WAIT_FOR_USER_SECONDS)
+
+        await session.generate_reply(
+            instructions=(
+                "Say a brief, warm goodbye in the same language the conversation has been happening in. "
+                f"The English version for reference: {USER_AWAY_GOODBYE}. "
+                "Do NOT call any tools. Just say the goodbye."
+            ),
+            allow_interruptions=True,
+        )
+
+        session.shutdown(drain=True)
+    except asyncio.CancelledError:
+        LOG.info("User presence check cancelled - user responded")
+        raise
+    except Exception as e:
+        LOG.error(f"Error in user presence task: {e}")
+
+
+# --- Server setup ---
+
+
+def prewarm(proc: JobProcess):
+    proc.userdata["vad"] = silero.VAD.load()
 
 
 server = AgentServer(initialize_process_timeout=60)
+server.setup_fnc = prewarm
 
 
 @server.rtc_session()
@@ -155,51 +154,22 @@ async def entrypoint(ctx: agents.JobContext):
         f"Participant: {participant.sid} {participant.identity} {participant.name} (kind={participant.kind})"
     )
 
-    call_duration = {"seconds": 0}
+    call_started_at = datetime.now(tz=timezone.utc)
+    inactivity_task: asyncio.Task | None = None
 
-    async def shutdown_callback():
-        await _on_session_end(
-            ctx,
-            call_duration,
-        )
-
-    ctx.add_shutdown_callback(shutdown_callback)
-
-    end_call_description = END_CALL_DESCRIPTION
-    session = AgentSession(
-        stt=inference.STT(STT_MODEL, language=STT_LANGUAGE),
-        llm=inference.LLM(model=LLM_MODEL),
-        # llm=openai.responses.LLM(model=LLM_ALTERNATIVE_MODEL, reasoning=Reasoning(effort=LLM_ALTERNATIVE_REASONING_EFFORT)),
-        # llm=inference.LLM(LLM_ALTERNATIVE_MODEL,
-        #                   provider="openai",
-        #                   extra_kwargs={
-        #                       "reasoning_effort": LLM_ALTERNATIVE_REASONING_EFFORT,
-        #                       "verbosity": LLM_ALTERNATIVE_VERBOSITY,
-        #                 }
-        #                 ),
-        tts=inference.TTS(
-            TTS_MODEL,
-            language=TTS_LANGUAGE,
-            voice=TTS_VOICE,
+    session: AgentSession = AgentSession(
+        llm=google.realtime.RealtimeModel(
+            model=GEMINI_MODEL,
+            voice=GEMINI_VOICE,
+            temperature=GEMINI_TEMPERATURE,
         ),
-        vad=silero.VAD.load(),
-        turn_handling=TurnHandlingOptions(
-            turn_detection=MultilingualModel(),
-        ),
+        vad=ctx.proc.userdata["vad"],
         user_away_timeout=WAIT_FOR_USER_SECONDS,
     )
 
     await session.start(
         room=ctx.room,
-        agent=Assistant(
-            tools=[
-                function_tool(
-                    end_call,
-                    name="end_call",
-                    description=end_call_description,
-                )
-            ],
-        ),
+        agent=Assistant(),
         room_options=room_io.RoomOptions(
             delete_room_on_close=True,
             audio_input=room_io.AudioInputOptions(
@@ -213,63 +183,45 @@ async def entrypoint(ctx: agents.JobContext):
         ),
     )
 
-    call_started_at = datetime.now(tz=timezone.utc)
-
     @session.on("conversation_item_added")
     def on_conversation_item_added(ev: ConversationItemAddedEvent):
-        LOG.info(f"[Chat] {ev.item.role}: {ev.item.content}")
-
-    async def user_presence_task():
-        try:
-            # Use session.say() to speak directly (no LLM processing)
-            # add_to_chat_ctx=True keeps these messages in transcript for analytics
-            await session.say(
-                USER_AWAY_PROMPT,
-                allow_interruptions=True,
-                add_to_chat_ctx=True,
-            )
-
-            await asyncio.sleep(WAIT_FOR_USER_SECONDS)
-
-            await session.say(
-                USER_AWAY_GOODBYE,
-                allow_interruptions=True,
-                add_to_chat_ctx=True,
-            )
-
-            session.shutdown(drain=True)
-        except asyncio.CancelledError:
-            # User spoke - task was cancelled, this is expected
-            LOG.info("User presence check cancelled - user responded")
-            raise
-        except Exception as e:
-            LOG.error(f"Error in user presence task: {e}")
-
-    inactivity_task: asyncio.Task | None = None
+        LOG.info(f"[Chat] {ev.item.role}: {ev.item.content}")  # type: ignore[union-attr]
 
     @session.on("user_state_changed")
     def _user_state_changed(ev: UserStateChangedEvent):
         nonlocal inactivity_task
         if ev.new_state == "away":
-            # Only start a new task if one isn't already running
             if inactivity_task is None or inactivity_task.done():
-                inactivity_task = asyncio.create_task(user_presence_task())
+                inactivity_task = asyncio.create_task(_user_presence_loop(session))
             return
 
-        # User is back (listening/speaking) - cancel any pending inactivity task
         if inactivity_task is not None and not inactivity_task.done():
             inactivity_task.cancel()
 
     @session.on("close")
-    def stop_tasks():
-        nonlocal call_duration
-        call_ended_at = datetime.now(tz=timezone.utc)
-        call_duration["seconds"] = (call_ended_at - call_started_at).total_seconds()
+    def on_close(ev: CloseEvent):
+        nonlocal inactivity_task
 
-    await session.generate_reply(
-        instructions=GENERATE_REPLY_INSTRUCTIONS,
-        allow_interruptions=True,
-    )
+        duration = (datetime.now(tz=timezone.utc) - call_started_at).total_seconds()
+        LOG.info(f"call duration: {duration:.2f}s")
+
+        if inactivity_task is not None and not inactivity_task.done():
+            inactivity_task.cancel()
+
+    async def classify_on_shutdown():
+        try:
+            classification = await asyncio.wait_for(
+                _classify_call(session.history),
+                timeout=6,
+            )
+            if classification:
+                LOG.info(f"Call Classification: {classification.model_dump_json()}")
+            else:
+                LOG.info("No classification generated for session")
+        except TimeoutError:
+            LOG.warning("Skipping call classification: summarization timed out")
+
+    ctx.add_shutdown_callback(classify_on_shutdown)
 
 
 if __name__ == "__main__":
