@@ -16,7 +16,7 @@ from livekit.agents import (
     room_io,
 )
 from livekit.agents.beta import EndCallTool
-from livekit.plugins import google, silero, noise_cancellation
+from livekit.plugins import openai, silero, noise_cancellation  # type: ignore[attr-defined]
 
 from core.logging.logger import LOG
 from core.models import CallClassification
@@ -25,9 +25,9 @@ from constants import (
     CALL_CLASSIFICATION_PROMPT,
     CLASSIFICATION_MODEL,
     GENERATE_REPLY_INSTRUCTIONS,
-    GEMINI_MODEL,
-    GEMINI_VOICE,
-    GEMINI_TEMPERATURE,
+    OPENAI_MODEL,
+    OPENAI_VOICE,
+    OPENAI_TEMPERATURE,
     USER_AWAY_GOODBYE,
     USER_AWAY_PROMPT,
     WAIT_FOR_USER_SECONDS,
@@ -158,10 +158,10 @@ async def entrypoint(ctx: agents.JobContext):
     inactivity_task: asyncio.Task | None = None
 
     session: AgentSession = AgentSession(
-        llm=google.realtime.RealtimeModel(
-            model=GEMINI_MODEL,
-            voice=GEMINI_VOICE,
-            temperature=GEMINI_TEMPERATURE,
+        llm=openai.realtime.RealtimeModel(
+            model=OPENAI_MODEL,
+            voice=OPENAI_VOICE,
+            temperature=OPENAI_TEMPERATURE,
         ),
         vad=ctx.proc.userdata["vad"],
         user_away_timeout=WAIT_FOR_USER_SECONDS,

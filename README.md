@@ -4,9 +4,9 @@ Voice AI agent for law firm call intake with real-time transcription, call class
 
 ## Architecture
 
-**Python Agent** — LiveKit Agents SDK with Gemini 2.5 Flash (RealtimeModel), Silero VAD, noise cancellation, user presence detection, and automatic call classification. See [python/README.md](python/README.md) for full setup.
+**Python Agent** — LiveKit Agents SDK with OpenAI Realtime API (gpt-realtime-mini), Silero VAD, noise cancellation, user presence detection, and automatic call classification. See [python/README.md](python/README.md) for full setup.
 
-**Agent UI (Next.js)** — Frontend with LiveKit voice session, real-time transcript capture via `useTranscriptions`, and post-call analytics powered by Gemini (spam detection, case type classification, urgency scoring, lead qualification, recommended next steps).
+**Agent UI (Next.js)** — Frontend with LiveKit voice session, real-time transcript capture via `useTranscriptions`, and post-call analytics powered by OpenAI (spam detection, case type classification, urgency scoring, lead qualification, recommended next steps).
 
 ## Quick Start
 
@@ -37,4 +37,4 @@ Required env vars: `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_URL`, `NEXT
 - Post-call analytics: spam detection, case type, urgency, lead qualification
 - Full transcript capture and display after call ends
 - Dark/light theme with Sterling & Associates branding
-- Gemini-powered call classification with automatic model fallback
+- OpenAI-powered call classification with automatic model fallback

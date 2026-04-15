@@ -55,7 +55,7 @@ GENERATE_REPLY_INSTRUCTIONS = (
 
 WAIT_FOR_USER_SECONDS = 15
 
-GEMINI_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
-GEMINI_VOICE = "Puck"
-GEMINI_TEMPERATURE = 0.8
-CLASSIFICATION_MODEL = "google/gemini-2.5-flash-lite"
+OPENAI_MODEL = "gpt-realtime-mini"
+OPENAI_VOICE = "cedar"
+OPENAI_TEMPERATURE = 0.8
+CLASSIFICATION_MODEL = "openai/gpt-4.1-mini"
