@@ -149,7 +149,14 @@ server.setup_fnc = prewarm
 async def entrypoint(ctx: agents.JobContext):
     await ctx.connect()
 
-    participant = await ctx.wait_for_participant()
+    try:
+        participant = await asyncio.wait_for(
+            ctx.wait_for_participant(), timeout=90
+        )
+    except (RuntimeError, asyncio.TimeoutError):
+        LOG.warning("No participant joined or room disconnected. Exiting job.")
+        return
+    
     LOG.info(
         f"Participant: {participant.sid} {participant.identity} {participant.name} (kind={participant.kind})"
     )
