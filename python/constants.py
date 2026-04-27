@@ -40,7 +40,7 @@ WAIT_FOR_USER_SECONDS = 10
 #     "Be precise. Use null for unknown values."
 # )
 
-STT_MODEL = "assemblyai/universal-streaming-multilingual"
+STT_MODEL = "deepgram/nova-3-multilingual"
 STT_LANGUAGE = "en"
 
 LLM_MODEL = "gpt-4o"
@@ -51,6 +51,6 @@ CHATBOT_API_URL = (
     "https://platform.jambhala-ai.com/api/chatbot/widget/adbbb0d79d33daef60b6c549/chat"
 )
 
-TTS_MODEL = "inworld/inworld-tts-1.5-max"
+TTS_MODEL = "cartesia/sonic-3"
 TTS_LANGUAGE = "en"
-TTS_VOICE = "Craig"
+TTS_VOICE = "default"
