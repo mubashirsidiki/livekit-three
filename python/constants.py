@@ -40,7 +40,7 @@ WAIT_FOR_USER_SECONDS = 10
 #     "Be precise. Use null for unknown values."
 # )
 
-STT_MODEL = "deepgram/nova-3-multilingual"
+STT_MODEL = "deepgram/nova-3"
 STT_LANGUAGE = "en"
 
 LLM_MODEL = "gpt-4o"
@@ -53,4 +53,4 @@ CHATBOT_API_URL = (
 
 TTS_MODEL = "cartesia/sonic-3"
 TTS_LANGUAGE = "en"
-TTS_VOICE = "default"
+TTS_VOICE = "9626c31c-bec5-4cca-baa8-f8ba9e84c8bc"
